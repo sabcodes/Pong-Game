@@ -6,17 +6,38 @@
 <script>
 var canvas;
 var canvasContent;
+var ballX = 50;
+var ballY;
+var myMusic;
 
 window.onload=function(){
 	console.log("Hello World!");
 	canvas = document.getElementById('gameCanvas');
 	canvasContent = canvas.getContext('2d');
+	myMusic= new sound("")
+	var framesPerSecond = 30;
+	setInterval(function(){
+	moveEverything();
+	drawEverything();
+	}, 1000/framesPerSecond); //1000 milliseconds
+	
+	
+}
+
+
+function moveEverything(){
+	ballX = ballX +5;
+}
+
+function drawEverything(){
+	
 	canvasContent.fillStyle = 'black';
 	canvasContent.fillRect(0,0,canvas.width,canvas.height);
+	canvasContent.fillStyle = 'white';
+	canvasContent.fillRect(0,210,10,80);
 	canvasContent.fillStyle = 'red';
-	canvasContent.fillRect(200,100,50,30);
-	canvasContent.fillStyle = 'green';
-	canvasContent.fillRect(210,135,20,20);
+	canvasContent.fillRect(ballX,100,10,10);
+
 }
 
 </script>
