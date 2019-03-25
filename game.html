@@ -7,8 +7,26 @@
 var canvas;
 var canvasContent;
 var ballX = 50;
-var ballY;
+var ballSpeedX = 10;
+var ballY = 50;
+var ballSpeedY = 4;
+
+var paddle1Y = 250;
+const PADDLE_HEIGHT = 100;
+
 var myMusic;
+
+function calculateMousePos(evt){
+	var rect = canvas.getBoundingClientRect();
+	var root = document.documentElement;
+	var mouseX = evt.clientX - rect.left - root.scrollLeft;
+	var mouseY = evt.clientY - rect.top - root.scrollTop;
+	return{
+		x:mouseX,
+		y:mouseY
+	};
+	
+}
 
 window.onload=function(){
 	console.log("Hello World!");
@@ -21,22 +39,55 @@ window.onload=function(){
 	drawEverything();
 	}, 1000/framesPerSecond); //1000 milliseconds
 	
-	
+	canvas.addEventListener('mousemove', function(evt){
+		var mousePos= calculateMousePos(evt);
+		paddle1Y = mousePos.y- (PADDLE_HEIGHT/2);
+	});
 }
 
 
 function moveEverything(){
-	ballX = ballX +5;
+	ballX = ballX +ballSpeedX;
+	ballY = ballY +ballSpeedY;
+	
+	if (ballX < 0){
+		ballSpeedX=-ballSpeedX;
+	}
+	if (ballX > canvas.width){
+		ballSpeedX = -ballSpeedX;
+	}
+	
+	if (ballY < 0){
+		ballSpeedY=-ballSpeedY;
+	}
+	if (ballY > canvas.height){
+		ballSpeedY = -ballSpeedY;
+	}
+	
 }
 
 function drawEverything(){
+	//draws the enviornment
+	colorRect(0,0,canvas.width,canvas.height, 'black');
+	//draws the paddle
+	colorRect(0,paddle1Y,10,PADDLE_HEIGHT,'white');
 	
-	canvasContent.fillStyle = 'black';
-	canvasContent.fillRect(0,0,canvas.width,canvas.height);
-	canvasContent.fillStyle = 'white';
-	canvasContent.fillRect(0,210,10,80);
-	canvasContent.fillStyle = 'red';
-	canvasContent.fillRect(ballX,100,10,10);
+	//draws the ball
+	colorCircle(ballX, ballY, 10, 'white');
+}
+
+function colorCircle(centerX, centerY, radius, drawColor){
+	canvasContent.fillStyle= drawColor;
+	canvasContent.beginPath();
+	//second one is y postion, thrird is width, and fourth is where is starts.
+	canvasContent.arc(centerX, centerY, radius, 0, Math.PI*2, true);
+	canvasContent.fill();
+
+}
+
+function colorRect(leftx, topy, width, height, drawColor){
+		canvasContent.fillStyle = drawColor;
+	canvasContent.fillRect(leftx, topy, width, height);
 
 }
 
