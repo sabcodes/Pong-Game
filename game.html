@@ -1,4 +1,11 @@
 <html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+	/* shrink the board to fit narrow windows so the right paddle is never cut off */
+	#gameCanvas { max-width: 100%; height: auto; display: block; }
+</style>
+</head>
 
 <canvas id = "gameCanvas" width="800" height="600">
 </canvas>
@@ -29,9 +36,9 @@ var myMusic;
 
 function calculateMousePos(evt){
 	var rect = canvas.getBoundingClientRect();
-	var root = document.documentElement;
-	var mouseX = evt.clientX - rect.left - root.scrollLeft;
-	var mouseY = evt.clientY - rect.top - root.scrollTop;
+	//the canvas can be drawn smaller than 800x600, so convert screen pixels to game pixels
+	var mouseX = (evt.clientX - rect.left) * canvas.width / rect.width;
+	var mouseY = (evt.clientY - rect.top) * canvas.height / rect.height;
 	return{
 		x:mouseX,
 		y:mouseY
