@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+.pytest_cache/
+ai/models/*.log
+ai/models/*.npy
+ai/models/*.pt
+.DS_Store
