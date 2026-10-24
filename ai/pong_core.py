@@ -28,8 +28,11 @@ class PongGame:
     (the Gym env, the Pygame viewer) can react without re-deriving them.
     """
 
-    def __init__(self, rng=None):
+    def __init__(self, rng=None, ball_speed=1.0):
+        """ball_speed scales the ball's speed and the angle it leaves the paddle at (1.0 = game.html's normal speed).
+        Paddle speeds stay the same, so a faster ball gives everyone less time to react."""
         self.rng = rng if rng is not None else np.random.default_rng()
+        self.ball_speed = ball_speed
         self.reset()
 
     def reset(self):
@@ -42,8 +45,8 @@ class PongGame:
     def serve(self, direction):
         self.ball_x = WIDTH / 2
         self.ball_y = self.rng.uniform(HEIGHT * 0.25, HEIGHT * 0.75)
-        self.ball_vx = BALL_SPEED_X * direction
-        self.ball_vy = BALL_SPEED_Y * self.rng.choice([-1, 1])
+        self.ball_vx = BALL_SPEED_X * self.ball_speed * direction
+        self.ball_vy = BALL_SPEED_Y * self.ball_speed * self.rng.choice([-1, 1])
 
     def move_left_paddle(self, action):
         if action == UP:
@@ -63,7 +66,7 @@ class PongGame:
     def _bounce_off(self, paddle_y):
         self.ball_vx = -self.ball_vx
         delta = self.ball_y - (paddle_y + PADDLE_HEIGHT / 2)
-        self.ball_vy = delta * SPIN_FACTOR
+        self.ball_vy = delta * SPIN_FACTOR * self.ball_speed
 
     def step(self, left_action, right_action=None):
         """Advance one frame. right_action=None means the CPU drives the right paddle."""
@@ -121,8 +124,8 @@ class PongGame:
         return np.array([
             bx / WIDTH,
             self.ball_y / HEIGHT,
-            vx / BALL_SPEED_X,
-            self.ball_vy / MAX_BALL_SPEED_Y,
+            vx / (BALL_SPEED_X * self.ball_speed),
+            self.ball_vy / (MAX_BALL_SPEED_Y * self.ball_speed),
             py / (HEIGHT - PADDLE_HEIGHT),
             oy / (HEIGHT - PADDLE_HEIGHT),
         ], dtype=np.float32)

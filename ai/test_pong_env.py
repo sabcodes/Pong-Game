@@ -87,3 +87,18 @@ def test_opponent_sampler_is_called_on_reset():
     env.reset(seed=0)
     env.reset(seed=1)
     assert len(calls) == 2
+
+
+def test_ball_speed_scales_ball_but_not_observation_range():
+    fast = PongGame(rng=np.random.default_rng(0), ball_speed=1.3)
+    assert abs(fast.ball_vx) == 13
+    assert abs(fast.observation()[2]) == 1
+
+
+def test_hit_reward_and_time_penalty_are_configurable():
+    env = PongEnv(hit_reward=0.0, time_penalty=0.002)
+    env.reset(seed=0)
+    g = env.game
+    g.ball_x, g.ball_y, g.ball_vx, g.ball_vy = 5, HEIGHT / 2, -10, 0
+    g.left_y = HEIGHT / 2 - PADDLE_HEIGHT / 2
+    assert np.isclose(env.step(2)[1], -0.002)

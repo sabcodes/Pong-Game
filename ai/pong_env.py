@@ -5,7 +5,8 @@ by default, or any opponent from opponents.py (self-play passes a sampler instea
 
   Action space:      Discrete(3)  0 = Up, 1 = Down, 2 = Stay
   Observation space: Box(6,)      [ball_x, ball_y, ball_vx, ball_vy, paddle_y, opponent_y] (normalized)
-  Reward:            +1 ball hit, -10 scored on, +10 agent scores
+  Reward:            +1 ball hit, -10 scored on, +10 agent scores (hit reward and a per-frame
+                     time cost are configurable: the medium and hard levels use 0 and a small cost)
   Termination:       either player reaches target_score
 """
 import gymnasium as gym
@@ -23,10 +24,16 @@ REWARD_SCORED = 10.0
 class PongEnv(gym.Env):
     metadata = {"render_modes": ["human"], "render_fps": 30}
 
-    def __init__(self, target_score=11, max_steps=5000, render_mode=None, opponent=None, opponent_sampler=None):
+    def __init__(self, target_score=11, max_steps=5000, render_mode=None, opponent=None, opponent_sampler=None,
+                 ball_speed=1.0, hit_reward=REWARD_HIT, time_penalty=0.0):
         """opponent: fixed right-paddle opponent (default: classic CPU).
-        opponent_sampler: called on every reset to pick a new opponent (used for self-play)."""
+        opponent_sampler: called on every reset to pick a new opponent (used for self-play).
+        hit_reward: reward for returning the ball. With it, long rallies pay, so the agent has
+            little reason to go for winning shots.
+        time_penalty: subtracted every frame, so finishing points sooner pays."""
         super().__init__()
+        self.hit_reward = hit_reward
+        self.time_penalty = time_penalty
         self.opponent = opponent or CpuOpponent()
         self.opponent_sampler = opponent_sampler
         self.target_score = target_score
@@ -38,7 +45,7 @@ class PongEnv(gym.Env):
             high=np.array([1, 1, 1, 1, 1, 1], dtype=np.float32),
             dtype=np.float32,
         )
-        self.game = PongGame()
+        self.game = PongGame(ball_speed=ball_speed)
         self._viewer = None
         self._steps = 0
 
@@ -55,9 +62,9 @@ class PongEnv(gym.Env):
         events = self.game.step(int(action), self.opponent.act(self.game))
         self._steps += 1
 
-        reward = 0.0
+        reward = -self.time_penalty
         if events["left_hit"]:
-            reward += REWARD_HIT
+            reward += self.hit_reward
         if events["right_scored"]:
             reward += REWARD_MISSED
         if events["left_scored"]:
