@@ -16,7 +16,7 @@ from pong_env import PongEnv
 
 
 class QNetwork(nn.Module):
-    def __init__(self, obs_size=5, n_actions=3, hidden=128):
+    def __init__(self, obs_size=6, n_actions=3, hidden=128):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(obs_size, hidden), nn.ReLU(),

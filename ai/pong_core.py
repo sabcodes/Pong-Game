@@ -28,8 +28,11 @@ class PongGame:
     (the Gym env, the Pygame viewer) can react without re-deriving them.
     """
 
-    def __init__(self, rng=None):
+    def __init__(self, rng=None, ball_speed=1.0):
+        """ball_speed scales the ball's speed and the angle it leaves the paddle at (1.0 = game.html's normal speed).
+        Paddle speeds stay the same, so a faster ball gives everyone less time to react."""
         self.rng = rng if rng is not None else np.random.default_rng()
+        self.ball_speed = ball_speed
         self.reset()
 
     def reset(self):
@@ -42,8 +45,8 @@ class PongGame:
     def serve(self, direction):
         self.ball_x = WIDTH / 2
         self.ball_y = self.rng.uniform(HEIGHT * 0.25, HEIGHT * 0.75)
-        self.ball_vx = BALL_SPEED_X * direction
-        self.ball_vy = BALL_SPEED_Y * self.rng.choice([-1, 1])
+        self.ball_vx = BALL_SPEED_X * self.ball_speed * direction
+        self.ball_vy = BALL_SPEED_Y * self.ball_speed * self.rng.choice([-1, 1])
 
     def move_left_paddle(self, action):
         if action == UP:
@@ -63,7 +66,7 @@ class PongGame:
     def _bounce_off(self, paddle_y):
         self.ball_vx = -self.ball_vx
         delta = self.ball_y - (paddle_y + PADDLE_HEIGHT / 2)
-        self.ball_vy = delta * SPIN_FACTOR
+        self.ball_vy = delta * SPIN_FACTOR * self.ball_speed
 
     def step(self, left_action, right_action=None):
         """Advance one frame. right_action=None means the CPU drives the right paddle."""
@@ -78,6 +81,14 @@ class PongGame:
 
         self.ball_x += self.ball_vx
         self.ball_y += self.ball_vy
+
+        # bounce off the top and bottom walls first, so a ball in a corner can't slip past a paddle
+        if self.ball_y < 0:
+            self.ball_y = -self.ball_y
+            self.ball_vy = -self.ball_vy
+        elif self.ball_y > HEIGHT:
+            self.ball_y = 2 * HEIGHT - self.ball_y
+            self.ball_vy = -self.ball_vy
 
         if self.ball_x < 0:
             if self.left_y < self.ball_y < self.left_y + PADDLE_HEIGHT:
@@ -98,28 +109,23 @@ class PongGame:
                 events["left_scored"] = True
                 self.serve(direction=-1)
 
-        if self.ball_y < 0:
-            self.ball_y = -self.ball_y
-            self.ball_vy = -self.ball_vy
-        elif self.ball_y > HEIGHT:
-            self.ball_y = 2 * HEIGHT - self.ball_y
-            self.ball_vy = -self.ball_vy
-
         return events
 
     def observation(self, side="left"):
-        """Normalized [ball_x, ball_y, ball_vx, ball_vy, paddle_y] from one paddle's point of view.
+        """Normalized [ball_x, ball_y, ball_vx, ball_vy, paddle_y, opponent_y] from one paddle's point of view.
 
         For the right paddle the x axis is mirrored, so one trained agent can play either side.
+        opponent_y lets the agent aim away from the other paddle.
         """
         if side == "left":
-            bx, vx, py = self.ball_x, self.ball_vx, self.left_y
+            bx, vx, py, oy = self.ball_x, self.ball_vx, self.left_y, self.right_y
         else:
-            bx, vx, py = WIDTH - self.ball_x, -self.ball_vx, self.right_y
+            bx, vx, py, oy = WIDTH - self.ball_x, -self.ball_vx, self.right_y, self.left_y
         return np.array([
             bx / WIDTH,
             self.ball_y / HEIGHT,
-            vx / BALL_SPEED_X,
-            self.ball_vy / MAX_BALL_SPEED_Y,
+            vx / (BALL_SPEED_X * self.ball_speed),
+            self.ball_vy / (MAX_BALL_SPEED_Y * self.ball_speed),
             py / (HEIGHT - PADDLE_HEIGHT),
+            oy / (HEIGHT - PADDLE_HEIGHT),
         ], dtype=np.float32)

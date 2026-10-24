@@ -9,14 +9,15 @@ import numpy as np
 
 from pong_env import PongEnv
 
-# Bins per observation dimension: ball_x, ball_y, ball_vx (direction), ball_vy, paddle_y
+# Bins per observation dimension: ball_x, ball_y, ball_vx (direction), ball_vy, paddle_y.
+# The opponent's paddle position is left out to keep the table small.
 BINS = (12, 12, 2, 6, 12)
 LOWS = np.array([0, 0, -1, -1, 0], dtype=np.float32)
 HIGHS = np.array([1, 1, 1, 1, 1], dtype=np.float32)
 
 
 def discretize(obs):
-    ratios = (np.asarray(obs) - LOWS) / (HIGHS - LOWS)
+    ratios = (np.asarray(obs)[:len(BINS)] - LOWS) / (HIGHS - LOWS)
     idx = (ratios * np.array(BINS)).astype(int)
     return tuple(np.clip(idx, 0, np.array(BINS) - 1))
 

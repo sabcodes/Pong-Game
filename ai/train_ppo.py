@@ -1,8 +1,8 @@
 """Phase 4: train the production agent with PPO (Stable Baselines 3), headlessly.
 
 Usage:  python train_ppo.py --steps 500000
-Then:   python export_policy.py   (makes the agent playable in game.html)
-        python play.py            (watch it in Pygame)
+Then:   python play.py --model models/ppo_pong_agent_cpu_only.zip   (watch it in Pygame)
+For the stronger agent the game uses, see train_selfplay.py.
 """
 import argparse
 
@@ -15,7 +15,8 @@ from pong_env import PongEnv
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--steps", type=int, default=500_000)
-    parser.add_argument("--out", default="models/ppo_pong_agent")
+    parser.add_argument("--out", default="models/ppo_pong_agent_cpu_only",
+                        help="kept separate from models/ppo_pong_agent.zip, the self-play agent the game uses")
     args = parser.parse_args()
 
     # 1. Initialize custom environment (Monitor logs ep_rew_mean so reward progress is visible)
