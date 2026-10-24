@@ -5,6 +5,7 @@ import numpy as np
 from gymnasium.utils.env_checker import check_env
 
 from pong_core import HEIGHT, PADDLE_HEIGHT, WIDTH, PongGame
+from opponents import CpuOpponent, SharpshooterOpponent, predict_intercept_y
 from pong_env import REWARD_HIT, REWARD_MISSED, REWARD_SCORED, PongEnv
 
 
@@ -23,7 +24,7 @@ def test_step_returns_gymnasium_tuple():
     env = PongEnv()
     env.reset(seed=1)
     obs, reward, terminated, truncated, info = env.step(1)
-    assert obs.shape == (5,) and obs.dtype == np.float32
+    assert obs.shape == (6,) and obs.dtype == np.float32
     assert isinstance(reward, float)
     assert isinstance(terminated, bool) and isinstance(truncated, bool)
 
@@ -59,6 +60,30 @@ def test_terminates_at_target_score():
 def test_observation_is_mirrored_for_right_side():
     game = PongGame(rng=np.random.default_rng(0))
     game.ball_x, game.ball_vx = 200, 10
+    game.left_y, game.right_y = 0, HEIGHT - PADDLE_HEIGHT
     left, right = game.observation("left"), game.observation("right")
     assert np.isclose(left[0], 0.25) and np.isclose(right[0], 0.75)
     assert left[2] == 1 and right[2] == -1
+    assert (left[4], left[5]) == (0, 1) and (right[4], right[5]) == (1, 0)
+
+
+def test_sharpshooter_predicts_bounce_and_returns_the_ball():
+    game = PongGame(rng=np.random.default_rng(0))
+    game.ball_x, game.ball_y, game.ball_vx, game.ball_vy = 400, 300, 10, 15
+    assert np.isclose(predict_intercept_y(game), 285)  # 41 frames: 300 + 615 = 915, bounces off the bottom to 285
+
+    env = PongEnv(opponent=SharpshooterOpponent(np.random.default_rng(0)))
+    env.reset(seed=0)
+    for _ in range(3000):
+        _, _, terminated, truncated, info = env.step(2)
+        if terminated:
+            break
+    assert info["left_score"] == 0  # a still paddle never scores against it
+
+
+def test_opponent_sampler_is_called_on_reset():
+    calls = []
+    env = PongEnv(opponent_sampler=lambda: calls.append(1) or CpuOpponent())
+    env.reset(seed=0)
+    env.reset(seed=1)
+    assert len(calls) == 2

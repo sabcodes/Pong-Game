@@ -93,7 +93,7 @@ function neuralNetAction(observation){
 		var next = [];
 		for(var i = 0; i < layers[l].weights.length; i++){
 			var sum = layers[l].bias[i];
-			for(var j = 0; j < values.length; j++){
+			for(var j = 0; j < layers[l].weights[i].length; j++){ //older agents take fewer inputs
 				sum += layers[l].weights[i][j] * values[j];
 			}
 			next.push(l < layers.length-1 ? Math.tanh(sum) : sum);
@@ -110,7 +110,8 @@ function neuralAIMovement(){
 		ballY/canvas.height,
 		-ballSpeedX/10,
 		ballSpeedY/MAX_BALL_SPEED_Y,
-		paddle2Y/(canvas.height-PADDLE_HEIGHT)
+		paddle2Y/(canvas.height-PADDLE_HEIGHT),
+		Math.min(Math.max(paddle1Y, 0), canvas.height-PADDLE_HEIGHT)/(canvas.height-PADDLE_HEIGHT) //your paddle
 	];
 	var action = neuralNetAction(observation); //0 = up, 1 = down, 2 = stay
 	if(action == 0){
@@ -145,7 +146,17 @@ function moveEverything(){
 	}
 	ballX += ballSpeedX;
 	ballY += ballSpeedY;
-	
+
+	//bounce off the top and bottom walls first, so a ball in a corner can't slip past a paddle
+	if (ballY < 0){
+		ballY = -ballY;
+		ballSpeedY=-ballSpeedY;
+	}
+	if (ballY > canvas.height){
+		ballY = 2*canvas.height - ballY;
+		ballSpeedY = -ballSpeedY;
+	}
+
 	if (ballX < 0){
 		if (ballY>paddle1Y &&
 		 ballY < paddle1Y+PADDLE_HEIGHT){
@@ -169,14 +180,6 @@ function moveEverything(){
 		 }
 	}
 	
-	if (ballY < 0){
-		ballY = -ballY;
-		ballSpeedY=-ballSpeedY;
-	}
-	if (ballY > canvas.height){
-		ballY = 2*canvas.height - ballY;
-		ballSpeedY = -ballSpeedY;
-	}
 	
 }
 

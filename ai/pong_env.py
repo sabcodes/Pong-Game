@@ -1,9 +1,10 @@
 """Gymnasium wrapper around the headless Pong core.
 
-The agent controls the left paddle; the right paddle is the hardcoded CPU from game.html.
+The agent controls the left paddle. The right paddle is the hardcoded CPU from game.html
+by default, or any opponent from opponents.py (self-play passes a sampler instead).
 
   Action space:      Discrete(3)  0 = Up, 1 = Down, 2 = Stay
-  Observation space: Box(5,)      [ball_x, ball_y, ball_vx, ball_vy, paddle_y] (normalized)
+  Observation space: Box(6,)      [ball_x, ball_y, ball_vx, ball_vy, paddle_y, opponent_y] (normalized)
   Reward:            +1 ball hit, -10 scored on, +10 agent scores
   Termination:       either player reaches target_score
 """
@@ -11,6 +12,7 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
+from opponents import CpuOpponent
 from pong_core import PongGame
 
 REWARD_HIT = 1.0
@@ -21,15 +23,19 @@ REWARD_SCORED = 10.0
 class PongEnv(gym.Env):
     metadata = {"render_modes": ["human"], "render_fps": 30}
 
-    def __init__(self, target_score=11, max_steps=5000, render_mode=None):
+    def __init__(self, target_score=11, max_steps=5000, render_mode=None, opponent=None, opponent_sampler=None):
+        """opponent: fixed right-paddle opponent (default: classic CPU).
+        opponent_sampler: called on every reset to pick a new opponent (used for self-play)."""
         super().__init__()
+        self.opponent = opponent or CpuOpponent()
+        self.opponent_sampler = opponent_sampler
         self.target_score = target_score
         self.max_steps = max_steps
         self.render_mode = render_mode
         self.action_space = spaces.Discrete(3)
         self.observation_space = spaces.Box(
-            low=np.array([0, 0, -1, -1, 0], dtype=np.float32),
-            high=np.array([1, 1, 1, 1, 1], dtype=np.float32),
+            low=np.array([0, 0, -1, -1, 0, 0], dtype=np.float32),
+            high=np.array([1, 1, 1, 1, 1, 1], dtype=np.float32),
             dtype=np.float32,
         )
         self.game = PongGame()
@@ -41,10 +47,12 @@ class PongEnv(gym.Env):
         self.game.rng = self.np_random
         self.game.reset()
         self._steps = 0
+        if self.opponent_sampler is not None:
+            self.opponent = self.opponent_sampler()
         return self.game.observation(), {}
 
     def step(self, action):
-        events = self.game.step(int(action))
+        events = self.game.step(int(action), self.opponent.act(self.game))
         self._steps += 1
 
         reward = 0.0
@@ -57,7 +65,8 @@ class PongEnv(gym.Env):
 
         terminated = max(self.game.left_score, self.game.right_score) >= self.target_score
         truncated = not terminated and self._steps >= self.max_steps
-        info = {"left_score": self.game.left_score, "right_score": self.game.right_score}
+        info = {"left_score": self.game.left_score, "right_score": self.game.right_score,
+                "opponent": self.opponent.name}
 
         if self.render_mode == "human":
             self.render()

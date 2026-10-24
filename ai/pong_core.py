@@ -79,6 +79,14 @@ class PongGame:
         self.ball_x += self.ball_vx
         self.ball_y += self.ball_vy
 
+        # bounce off the top and bottom walls first, so a ball in a corner can't slip past a paddle
+        if self.ball_y < 0:
+            self.ball_y = -self.ball_y
+            self.ball_vy = -self.ball_vy
+        elif self.ball_y > HEIGHT:
+            self.ball_y = 2 * HEIGHT - self.ball_y
+            self.ball_vy = -self.ball_vy
+
         if self.ball_x < 0:
             if self.left_y < self.ball_y < self.left_y + PADDLE_HEIGHT:
                 self._bounce_off(self.left_y)
@@ -98,28 +106,23 @@ class PongGame:
                 events["left_scored"] = True
                 self.serve(direction=-1)
 
-        if self.ball_y < 0:
-            self.ball_y = -self.ball_y
-            self.ball_vy = -self.ball_vy
-        elif self.ball_y > HEIGHT:
-            self.ball_y = 2 * HEIGHT - self.ball_y
-            self.ball_vy = -self.ball_vy
-
         return events
 
     def observation(self, side="left"):
-        """Normalized [ball_x, ball_y, ball_vx, ball_vy, paddle_y] from one paddle's point of view.
+        """Normalized [ball_x, ball_y, ball_vx, ball_vy, paddle_y, opponent_y] from one paddle's point of view.
 
         For the right paddle the x axis is mirrored, so one trained agent can play either side.
+        opponent_y lets the agent aim away from the other paddle.
         """
         if side == "left":
-            bx, vx, py = self.ball_x, self.ball_vx, self.left_y
+            bx, vx, py, oy = self.ball_x, self.ball_vx, self.left_y, self.right_y
         else:
-            bx, vx, py = WIDTH - self.ball_x, -self.ball_vx, self.right_y
+            bx, vx, py, oy = WIDTH - self.ball_x, -self.ball_vx, self.right_y, self.left_y
         return np.array([
             bx / WIDTH,
             self.ball_y / HEIGHT,
             vx / BALL_SPEED_X,
             self.ball_vy / MAX_BALL_SPEED_Y,
             py / (HEIGHT - PADDLE_HEIGHT),
+            oy / (HEIGHT - PADDLE_HEIGHT),
         ], dtype=np.float32)
